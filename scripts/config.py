@@ -23,10 +23,10 @@ parser.add_argument('--dataset', type=str,
 parser.add_argument('--dataset_root', type=str,
                     default="./data/SUN-SEG")
 parser.add_argument('--size', type=tuple,
-                    default=(256, 448))
+                    default=(256, 256))
 parser.add_argument('--batchsize', type=int, default=24)
-parser.add_argument('--video_time_clips', type=int, default=5)
+parser.add_argument('--video_time_clips', type=int, default=11)
 
-parser.add_argument('--save_path', type=str, default='snapshot/PNSPlus/')
+parser.add_argument('--save_path', type=str, default='snapshot/SSTAN/')
 
 config = parser.parse_args()

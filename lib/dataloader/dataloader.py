@@ -39,8 +39,12 @@ class VideoDataset(Dataset):
         for cls in cls_list:
             li = self.video_filelist[cls]
             for begin in range(1, len(li) - (self.time_clips - 1) * time_interval - 1):
+                shot0 = li[begin][0].split('_a')[1]
+                shot1 = li[begin + time_interval * self.time_clips][0].split('_a')[1]
+                if shot0 != shot1:
+                    continue
                 batch_clips = []
-                batch_clips.append(li[0])
+                # batch_clips.append(li[0])
                 for t in range(self.time_clips):
                     batch_clips.append(li[begin + time_interval * t])
                 self.video_train_list.append(batch_clips)
@@ -61,12 +65,10 @@ class VideoDataset(Dataset):
         for idx, (img, label) in enumerate(zip(img_li, label_li)):
             if idx == 0:
                 IMG = torch.zeros(len(img_li), *(img.shape))
-                LABEL = torch.zeros(len(img_li) - 1, *(label.shape))
+                LABEL = torch.zeros(len(img_li), *(label.shape))
 
-                IMG[idx, :, :, :] = img
-            else:
-                IMG[idx, :, :, :] = img
-                LABEL[idx - 1, :, :, :] = label
+            IMG[idx, :, :, :] = img
+            LABEL[idx, :, :, :] = label
 
         return IMG, LABEL
 

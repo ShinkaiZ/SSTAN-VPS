@@ -59,7 +59,6 @@ def evaluator(gt_pth_lst, pred_pth_lst, metrics):
 
 
 def eval_engine_vps(opt, txt_save_path):
-
     # evaluation for whole dataset
     for _data_name in opt.data_lst[0]:
         print('#' * 20, 'Current Dataset:', _data_name, '#' * 20)
@@ -84,7 +83,8 @@ def eval_engine_vps(opt, txt_save_path):
                 case_list = os.listdir(gt_src)
                 mean_case_score_list, max_case_score_list = [], []
                 # iter each video frame for current method-dataset
-                for case in case_list:
+                for i, case in enumerate(case_list):
+                    print(case, i + 1, '/', len(case_list))
                     case_gt_name_list = glob.glob(gt_src + '/{}/*.png'.format(case))
 
                     try:
@@ -121,7 +121,7 @@ def eval_engine_vps(opt, txt_save_path):
                                 mean_score_list.append(value)
                                 mean_score_ind.append(i)
                         else:
-                            mean_score_list.append([value]*256)
+                            mean_score_list.append([value] * 256)
                             mean_score_ind.append(i)
 
                     # calculate all the metrics at frame-level
@@ -140,7 +140,6 @@ def eval_engine_vps(opt, txt_save_path):
                     else:
                         case_score_list.append(mean_case_score_list[real_mean_index[0]].mean().round(3))
 
-
                 final_score_list = ['{:.3f}'.format(case) for case in case_score_list]
                 tb.add_row([_data_name.replace('/', '-'), _model_name] + list(final_score_list))
             print(tb)
@@ -152,13 +151,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--gt_root', type=str, help='custom your ground-truth root',
-        default='../data/SUN-SEG-Annotation/')
+        default='../data/SUN-SEG/')
     parser.add_argument(
         '--pred_root', type=str, help='custom your prediction root',
-        default='../data/Pred/')
+        default='../res/')
     parser.add_argument(
         '--metric_list', type=list, help='set the evaluation metrics',
-        default=['Smeasure', 'maxEm', 'wFmeasure', 'maxDice', 'maxIoU'],
+        default=['Smeasure', 'maxEm', 'wFmeasure', 'maxDice', 'maxIoU', 'meanSen', 'meanFm', 'meanEm'],
         choices=["Smeasure", "wFmeasure", "MAE", "adpEm", "meanEm", "maxEm", "adpFm", "meanFm", "maxFm",
                  "meanSen", "maxSen", "meanSpe", "maxSpe", "meanDice", "maxDice", "meanIoU", "maxIoU"])
     parser.add_argument(
@@ -168,9 +167,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--model_lst', type=str, help='candidate competitors',
         nargs='+', action='append',
-        choices=['2015-MICCAI-UNet', '2018-TMI-UNet++', '2020-MICCAI-ACSNet', '2020-MICCAI-PraNet',
-                 '2021-MICCAI-SANet', '2019-TPAMI-COSNet', '2020-AAAI-PCSA', '2020-MICCAI-23DCNN', '2020-TIP-MATNet',
-                 '2021-ICCV-DCFNet', '2021-ICCV-FSNet', '2021-MICCAI-PNSNet', '2021-NIPS-AMD', '2022-TMI-PNSPlus'])
+        # choices=['2015-MICCAI-UNet', '2018-TMI-UNet++', '2020-MICCAI-ACSNet', '2020-MICCAI-PraNet',
+        #          '2021-MICCAI-SANet', '2019-TPAMI-COSNet', '2020-AAAI-PCSA', '2020-MICCAI-23DCNN', '2020-TIP-MATNet',
+        #          '2021-ICCV-DCFNet', '2021-ICCV-FSNet', '2021-MICCAI-PNSNet', '2021-NIPS-AMD', '2022-TMI-PNSPlus']
+    )
     parser.add_argument(
         '--txt_name', type=str, help='logging root',
         default='Benchmark')

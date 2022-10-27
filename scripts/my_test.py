@@ -7,8 +7,11 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import ToTensor, Compose, Resize
 
+import sys
+sys.path.append('./')
 from config import config
-from lib.module.PNSPlusNetwork import PNSNet as Network
+# from lib.module.PNSPlusNetwork import PNSNet as Network
+from lib.module.vacs import VACSNet as Network
 
 
 def safe_save(img, save_path):
@@ -56,14 +59,27 @@ class Test_Dataset(Dataset):
         for cls in cls_list:
             li = self.video_filelist[cls]
             begin = 0  # change for inference from first frame
-            while begin < len(li):
-                if len(li) - begin - 1 < self.time_clips:
-                    begin = len(li) - self.time_clips
+            while begin < len(li) - 1:
+                shot0 = li[begin].split('_a')[1]
+                frame = 0
+                end = min(begin + self.time_clips - 1, len(li) - 1)
+                for frame in range(self.time_clips):
+                    shot1 = li[min(begin + time_interval * frame, len(li) - 1)].split('_a')[1]
+                    if shot0 != shot1:
+                        end = begin + frame - 1
+                        break
+                if frame != (self.time_clips - 1):
+                    shot0 = li[begin].split('_a')[1]
+                    shot1 = li[end].split('_a')[1]
+                    assert shot0 == shot1
                 batch_clips = []
-                batch_clips.append(li[0])
+                # batch_clips.append(li[0])
                 for t in range(self.time_clips):
-                    batch_clips.append(li[begin + time_interval * t])
-                begin += self.time_clips
+                    batch_clips.append(li[min(begin + time_interval * t, end)])
+                if frame != self.time_clips:
+                    begin += self.time_clips
+                else:
+                    begin += self.time_clips - 1
                 self.video_test_list.append(batch_clips)
 
         self.img_transform = Compose([
@@ -101,13 +117,13 @@ class AutoTest:
         for dst in self.test_dataset:
             self.dataloader[dst] = DataLoader(Test_Dataset(data_root, dst), batch_size=1, shuffle=False, num_workers=8)
         print('Load checkpoint:', model_path)
-        self.model = Network().cuda()
+        self.model = Network(cfg=config).cuda()
         new_state = {}
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
         for key, value in state_dict.items():
             new_state[key.replace('module.', '')] = value
 
-        self.tag_dir = 'res/'+model_path.split('/')[-3]+'_'+model_path.split('/')[-2]+'/'
+        self.tag_dir = 'res/' + model_path.split('/')[-3] + '_' + model_path.split('/')[-2] + '/'
         self.model.load_state_dict(new_state)
         self.model.eval()
 
@@ -116,7 +132,9 @@ class AutoTest:
             for dst in self.test_dataset:
                 for img, path_li in tqdm(self.dataloader[dst], desc="test:%s" % dst):
                     result = self.model(img.cuda())
-                    for res, path in zip(result, path_li[1:]):
+                    result = result['seg_final'].squeeze()
+                    result = torch.sigmoid(result)
+                    for res, path in zip(result, path_li[:]):
                         npres = res.squeeze().cpu().numpy()
                         safe_save(Image.fromarray((npres * 255).astype(np.uint8)),
                                   path[0].replace(self.data_root, self.tag_dir).replace(".jpg", ".png").replace('Frame',
@@ -126,7 +144,6 @@ class AutoTest:
 if __name__ == "__main__":
 
     at = AutoTest(['TestEasyDataset/Seen', 'TestHardDataset/Seen', 'TestEasyDataset/Unseen', 'TestHardDataset/Unseen'],
-                  config.video_testset_root,
-                  "snapshot/PNSPlus/epoch_15/PNSPlus.pth")
+                  config.dataset_root,
+                  "snapshot/SSTAN/epoch_15/SSTAN.pth")
     at.test()
-
