@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This repository contains the **fully-supervised** version in SUN-SEG dataset of:
+This repository contains the **fully-supervised(fully-supervised for training, unsupervised for testing)** version in SUN-SEG dataset of:
 
-Semi-supervised Spatial Temporal Attention Network for Video Polyp Segmentation, MICCAI 2022 [PDF](http://guanbinli.com/papers/Semi-supervised%20Spatial%20Temporal%20Attention%20Network%20for%20Video%20Polyp%20Segmentation.pdf)
+Semi-supervised Spatial Temporal Attention Network for Video Polyp Segmentation, MICCAI 2022 [PDF](https://rdcu.be/cVRwv)
 
 Although our work was based on semi-supervised learning, 
 the fully-supervised version still achieves state-of-the-art results in most metrics.
