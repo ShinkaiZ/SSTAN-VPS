@@ -76,10 +76,7 @@ class Test_Dataset(Dataset):
                 # batch_clips.append(li[0])
                 for t in range(self.time_clips):
                     batch_clips.append(li[min(begin + time_interval * t, end)])
-                if frame != self.time_clips:
-                    begin += self.time_clips
-                else:
-                    begin += self.time_clips - 1
+                begin = end + 1
                 self.video_test_list.append(batch_clips)
 
         self.img_transform = Compose([
