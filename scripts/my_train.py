@@ -41,7 +41,52 @@ class BCEDiceLoss(nn.Module):
         return (wbce + dice_loss).mean()
 
 
-def loss_function(outputs, target):
+def lossStage1(outputs, target):
+    b, l, _, _, _ = target.shape
+
+    criterion_res = BCEDiceLoss().cuda()
+    criterion_con = nn.SmoothL1Loss().cuda()
+
+    output_target = outputs['seg_final']
+    out1 = outputs['out1']
+    out2 = outputs['out2']
+    out3 = outputs['out3']
+    out4 = outputs['out4']
+
+    target_0 = target[:, 0]
+    target_1 = target[:, -1]
+    loss0 = criterion_res(output_target[:, 0], target_0) + criterion_res(output_target[:, -1], target_1)
+    target_01 = F.interpolate(target_0, scale_factor=0.5, mode='bilinear', align_corners=True)
+    target_11 = F.interpolate(target_1, scale_factor=0.5, mode='bilinear', align_corners=True)
+    loss1 = criterion_res(out1[:, 0], target_01) + criterion_res(out1[:, -1], target_11)
+    target_02 = F.interpolate(target_01, scale_factor=0.5, mode='bilinear', align_corners=True)
+    target_12 = F.interpolate(target_11, scale_factor=0.5, mode='bilinear', align_corners=True)
+    loss2 = criterion_res(out2[:, 0], target_02) + criterion_res(out2[:, -1], target_12)
+    target_03 = F.interpolate(target_02, scale_factor=0.5, mode='bilinear', align_corners=True)
+    target_13 = F.interpolate(target_12, scale_factor=0.5, mode='bilinear', align_corners=True)
+    loss3 = criterion_res(out3[:, 0], target_03) + criterion_res(out3[:, -1], target_13)
+    target_04 = F.interpolate(target_03, scale_factor=0.5, mode='bilinear', align_corners=True)
+    target_14 = F.interpolate(target_13, scale_factor=0.5, mode='bilinear', align_corners=True)
+    loss4 = criterion_res(out4[:, 0], target_04) + criterion_res(out4[:, -1], target_14)
+    loss_ce = (loss0 + loss1 + loss2 + loss3 + loss4) / 5
+
+    loss_mse = 0
+    for j in range(l - 1):
+        loss_mse += criterion_con(output_target[:, j], output_target[:, j + 1])
+        loss_mse += criterion_con(out1[:, j], out1[:, j + 1])
+        loss_mse += criterion_con(out2[:, j], out2[:, j + 1])
+        loss_mse += criterion_con(out3[:, j], out3[:, j + 1])
+        loss_mse += criterion_con(out4[:, j], out4[:, j + 1])
+    loss_mse /= ((l - 1) * 5)
+
+    weight = 0.5
+    loss = (1 - weight) * loss_ce + weight * loss_mse
+    # print(loss_ce, loss_mse, loss)
+
+    return loss
+
+
+def lossStage2(outputs, target):
     b, l, _, _, _ = target.shape
 
     criterion_res = BCEDiceLoss().cuda()
@@ -164,7 +209,8 @@ if __name__ == '__main__':
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    loss_func = loss_function
+    loss_func = lossStage1
+    loss_func2 = lossStage2
 
     # load data
     print('load data...')
@@ -198,4 +244,7 @@ if __name__ == '__main__':
     print("Start train...")
     for epoch in range(config.epoches):
         cur_lr = adjust_lr(optimizer, config.base_lr, epoch, config.decay_rate, config.decay_epoch)
-        train(train_loader, model, optimizer, epoch, save_path, loss_func)
+        if int(epoch) < int(config.epoches / 2 * 1):
+            train(train_loader, model, optimizer, epoch, save_path, loss_func)
+        else:
+            train(train_loader, model, optimizer, epoch, save_path, loss_func2)
